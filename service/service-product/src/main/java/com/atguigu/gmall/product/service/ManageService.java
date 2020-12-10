@@ -2,6 +2,7 @@ package com.atguigu.gmall.product.service;
 
 import com.alibaba.fastjson.JSONObject;
 import com.atguigu.gmall.common.result.Result;
+import com.atguigu.gmall.model.list.SearchAttr;
 import com.atguigu.gmall.model.product.*;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -97,5 +98,10 @@ public interface ManageService {
 
     //获取首页显示的分类数据的方法
     public List<JSONObject> getBaseCategoryList();
+
+    List<BaseAttrInfo> getBaseAttrInfoList(Long skuId);
+
+    BaseTrademark selectTrademarkData(Long tmId);
+
 
 }

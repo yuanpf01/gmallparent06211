@@ -13,4 +13,5 @@ import org.apache.ibatis.annotations.Mapper;
  */
 @Mapper
 public interface BaseTrademarkMapper extends BaseMapper<BaseTrademark> {
+    BaseTrademark selectBaseTrademarkById(Long tmId);
 }

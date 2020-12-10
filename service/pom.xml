@@ -15,6 +15,7 @@
     <modules>
         <module>service-product</module>
         <module>service-item</module>
+        <module>service-list</module>
     </modules>
     <dependencies>
         <!--依赖服务的工具类-->

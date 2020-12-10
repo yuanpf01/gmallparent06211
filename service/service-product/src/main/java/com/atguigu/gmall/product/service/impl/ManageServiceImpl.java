@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.atguigu.gmall.common.cache.MyGmallCache;
 import com.atguigu.gmall.common.constant.RedisConst;
+import com.atguigu.gmall.model.list.SearchAttr;
 import com.atguigu.gmall.model.product.*;
 import com.atguigu.gmall.product.mapper.*;
 import com.atguigu.gmall.product.service.ManageService;
@@ -393,5 +394,19 @@ public class ManageServiceImpl implements ManageService {
         }
 
         return list;
+    }
+
+    @Override
+    public List<BaseAttrInfo> getBaseAttrInfoList(Long skuId) {
+        List<BaseAttrInfo> BaseAttrInfoList = baseAttrInfoMapper.selectBaseAttrInfoAndValueList(skuId);
+        return BaseAttrInfoList;
+    }
+
+    @Override
+    public BaseTrademark selectTrademarkData(Long tmId) {
+
+//        BaseTrademark baseTrademark = baseTrademarkMapper.selectById(tmId);
+        BaseTrademark baseTrademark = baseTrademarkMapper.selectBaseTrademarkById(tmId);
+        return baseTrademark;
     }
 }

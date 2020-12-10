@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper SYSTEM "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<!--namespace 定义接口的全路径-->
+<mapper namespace="com.atguigu.gmall.product.mapper.BaseTrademarkMapper">
+    <resultMap id="baseTrademarkMap" type="com.atguigu.gmall.model.product.BaseTrademark" autoMapping="true">
+        <id column="id" property="id"></id>
+    </resultMap>
+    <select id="selectBaseTrademarkById" resultMap="baseTrademarkMap">
+        select bt.tm_name,
+               bt.logo_url
+        from base_trademark bt
+        where bt.id=#{id}
+    </select>
+</mapper>

@@ -1,9 +1,7 @@
 package com.atguigu.gmall.product.client;
 
 import com.atguigu.gmall.common.result.Result;
-import com.atguigu.gmall.model.product.BaseCategoryView;
-import com.atguigu.gmall.model.product.SkuInfo;
-import com.atguigu.gmall.model.product.SpuSaleAttr;
+import com.atguigu.gmall.model.product.*;
 import com.atguigu.gmall.product.client.fallback.ProductDegradeFeignClient;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,7 +15,6 @@ import java.util.Map;
  * @author yuanpf
  * @create 2020-12-05 22:44
  */
-//api/productinner/getSkuInfo/{skuId}
 @FeignClient(name = "service-product",fallback = ProductDegradeFeignClient.class)
 public interface ProductFeignClient {
 
@@ -59,4 +56,15 @@ public interface ProductFeignClient {
      */
     @GetMapping("api/product/getBaseCategoryList")
     public Result getBaseCategoryList();
+
+
+    /**
+     * 根据skuid获取平台属性，平台属性值/getAttrList/{skuId}
+     */
+    @GetMapping("api/product/getAttrList/{skuId}")
+    public List<BaseAttrInfo> getBaseAttrInfo(@PathVariable Long skuId);
+
+    //根据品牌id获取品牌信息
+    @GetMapping("api/product/inner/getTrademark/{tmId}")
+    public BaseTrademark getTrademarkData(@PathVariable Long tmId);
 }

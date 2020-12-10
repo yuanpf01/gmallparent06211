@@ -1,6 +1,7 @@
 package com.atguigu.gmall.item.service.impl;
 
 import com.alibaba.fastjson.JSON;
+import com.atguigu.gmall.client.ListFeignClient;
 import com.atguigu.gmall.item.config.MyThreadPoolExcute;
 import com.atguigu.gmall.item.service.ItemService;
 import com.atguigu.gmall.model.product.BaseCategoryView;
@@ -27,6 +28,9 @@ public class ItemServiceImpl implements ItemService {
 
     @Autowired
     private MyThreadPoolExcute myThreadPoolExcute;
+
+    @Autowired
+    private ListFeignClient listFeignClient;
 
     @Override
     public Map<String,Object> getBySkuId(Long skuId){
@@ -73,6 +77,9 @@ public class ItemServiceImpl implements ItemService {
             // 保存valuesSkuJson
             map.put("valuesSkuJson",mapToJson);
         }));
+        CompletableFuture<Void> incrHotScoreCompletableFuture = CompletableFuture.runAsync(() -> {
+            listFeignClient.incrHotScore(skuId);
+        });
 
 //        // 保存 json字符串        异常点：json转换两次，无法实现跳转
 //        String valuesSkuJson = JSON.toJSONString(mapToJson);
@@ -81,7 +88,8 @@ public class ItemServiceImpl implements ItemService {
                                 priceCompletableFuture,
                                 baseCategoryViewListCompletableFuture,
                                 spuSaleAttrAndValueCompletableFuture,
-                                skuSaleValueIdsMapCompletableFuture).join();
+                                skuSaleValueIdsMapCompletableFuture,
+                                incrHotScoreCompletableFuture).join();
         return map;
     }
 }

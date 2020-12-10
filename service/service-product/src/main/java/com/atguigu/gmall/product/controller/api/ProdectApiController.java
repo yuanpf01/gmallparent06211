@@ -2,9 +2,9 @@ package com.atguigu.gmall.product.controller.api;
 
 import com.alibaba.fastjson.JSONObject;
 import com.atguigu.gmall.common.result.Result;
-import com.atguigu.gmall.model.product.BaseCategoryView;
-import com.atguigu.gmall.model.product.SkuInfo;
-import com.atguigu.gmall.model.product.SpuSaleAttr;
+import com.atguigu.gmall.model.list.Goods;
+import com.atguigu.gmall.model.list.SearchAttr;
+import com.atguigu.gmall.model.product.*;
 import com.atguigu.gmall.product.service.ManageService;
 import com.atguigu.gmall.product.service.SkuInfoService;
 import com.atguigu.gmall.product.service.SpuInfoService;
@@ -86,4 +86,18 @@ public class ProdectApiController {
         return Result.ok(list);
     }
 
+    /**
+     * 根据skuid获取平台属性，平台属性值
+     */
+    @GetMapping("getAttrList/{skuId}")
+    public List<BaseAttrInfo> getBaseAttrInfo(@PathVariable Long skuId){
+        List<BaseAttrInfo> baseAttrInfoList = manageService.getBaseAttrInfoList(skuId);
+        return baseAttrInfoList;
+    }
+    //根据品牌id获取品牌信息
+    @GetMapping("inner/getTrademark/{tmId}")
+    public BaseTrademark getTrademarkData(@PathVariable Long tmId){
+       BaseTrademark baseTrademark =  manageService.selectTrademarkData(tmId);
+       return baseTrademark;
+    }
 }
