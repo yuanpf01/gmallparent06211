@@ -77,6 +77,9 @@ public class ItemServiceImpl implements ItemService {
             // 保存valuesSkuJson
             map.put("valuesSkuJson",mapToJson);
         }));
+        /**
+         * 调用热度排名
+         */
         CompletableFuture<Void> incrHotScoreCompletableFuture = CompletableFuture.runAsync(() -> {
             listFeignClient.incrHotScore(skuId);
         });

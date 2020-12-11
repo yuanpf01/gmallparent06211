@@ -42,7 +42,7 @@ public class MyGmallCacheAspect {
              //获取到注解
             MyGmallCache annotation = signature.getMethod().getAnnotation(MyGmallCache.class);
             //获取注解中的前缀
-            String prefix = annotation.prefix().toString();
+            String prefix = annotation.prefix();
             //获取方法中的参数
             Object[] args = joinPoint.getArgs();
             //定义数据在缓存中的key  注解中的【参数】前缀+ 方法的参数
@@ -56,21 +56,27 @@ public class MyGmallCacheAspect {
                 //上锁
                 boolean flag = lock.tryLock(RedisConst.SKULOCK_EXPIRE_PX1, RedisConst.SKULOCK_EXPIRE_PX1, TimeUnit.SECONDS);
                 if (flag){//上锁成功，从数据库查询数据
-                    object = joinPoint.proceed(args);//执行方法体
-                    if (object == null){//数据库中没有数据
-                        Object object1 = new Object();
-                        //放到缓存
-                        redisTemplate.opsForValue().set(dataKey,
-                                                        object1,
-                                                        RedisConst.SKUKEY_TEMPORARY_TIMEOUT,
-                                                        TimeUnit.SECONDS);
-                        return object1;
-                    }else {//数据库中有数据
-                        redisTemplate.opsForValue().set(dataKey,
-                                                        object,
-                                                        RedisConst.SKUKEY_TIMEOUT,
-                                                        TimeUnit.SECONDS);
-                        return object;
+                    try {
+                        object = joinPoint.proceed(args);//执行方法体
+                        if (object == null){//数据库中没有数据
+                            Object object1 = new Object();
+                            //放到缓存
+                            redisTemplate.opsForValue().set(dataKey,
+                                                            JSON.toJSONString(object1),
+                                                            RedisConst.SKUKEY_TEMPORARY_TIMEOUT,
+                                                            TimeUnit.SECONDS);
+                            return object1;
+                        }else {//数据库中有数据
+                            redisTemplate.opsForValue().set(dataKey,
+                                                            JSON.toJSONString(object),
+                                                            RedisConst.SKUKEY_TIMEOUT,
+                                                            TimeUnit.SECONDS);
+                            return object;
+                        }
+                    } catch (Throwable throwable) {
+                        throwable.printStackTrace();
+                    }finally{//解锁
+                        lock.unlock();
                     }
                 }else {//上锁失败
                     //等待

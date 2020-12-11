@@ -13,13 +13,29 @@ import java.util.concurrent.TimeUnit;
  */
 @Configuration
 public class MyThreadPoolExcute {
-    @Bean
+    /*@Bean
     public ThreadPoolExecutor getThreadPoolExecutor(){
-        ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(10,
-                20,
-                3L,
+        ThreadPoolExecutor myThreadPoolExecutor =
+                new ThreadPoolExecutor(5,
+                                  20,
+                                     3L,
+                                                   TimeUnit.SECONDS,
+                                                   new ArrayBlockingQueue<>(5));//拒绝策略和工厂可以采用默认的，也可以自己声明
+        return myThreadPoolExecutor;
+    }
+}
+*/
+
+
+    @Bean
+    public ThreadPoolExecutor threadPoolExecutor(){
+        //  创建线程池
+        return new ThreadPoolExecutor(
+                3,
+                5,
+                3l,
                 TimeUnit.SECONDS,
-                new ArrayBlockingQueue<>(5));//拒绝策略和工厂可以采用默认的，也可以自己声明
-        return threadPoolExecutor;
+                new ArrayBlockingQueue<>(100)
+        );
     }
 }

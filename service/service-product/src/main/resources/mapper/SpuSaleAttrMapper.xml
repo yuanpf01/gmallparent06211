@@ -16,7 +16,7 @@
                ssav.id sale_attr_value_id,
                ssav.sale_attr_value_name,
                sav.sku_id,
-               if(sav.sku_id is null ,0,1) isChecked
+               if(sav.sku_id is null ,0,1) is_checked
         from spu_sale_attr ssa
          inner join spu_sale_attr_value ssav
             on ssa.base_sale_attr_id = ssav.base_sale_attr_id and ssa.spu_id=ssav.spu_id
