@@ -15,18 +15,25 @@ spring:
         - id: service-product
           uri: lb://service-product
           predicates:
-            - Path=/*/product/**      # 路径匹配
+            - Path=/*/product/** # 路径匹配
         - id: service-item
           uri: lb://service-item
           predicates:
-            - Path=/*/item/**
+            - Path=/*/item/** # 路径匹配
+        - id: service-list
+          uri: lb://service-list
+          predicates:
+            - Path=/*/list/** # 路径匹配
         #==================web前端==========================
         - id: web-item
           uri: lb://web-all
           predicates:
             - Host=item.gmall.com
-        #==================首页渲染=========================
-        - id: web-index
+        - id: web-item
           uri: lb://web-all
           predicates:
             - Host=www.gmall.com
+        - id: web-list
+          uri: lb://web-all
+          predicates:
+            - Host=list.gmall.com

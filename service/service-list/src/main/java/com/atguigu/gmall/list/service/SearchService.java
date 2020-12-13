@@ -1,10 +1,7 @@
 package com.atguigu.gmall.list.service;
 
 import com.atguigu.gmall.model.list.SearchParam;
-import com.atguigu.gmall.model.list.SearchResponseAttrVo;
 import com.atguigu.gmall.model.list.SearchResponseVo;
-
-import java.io.IOException;
 
 /**
  * @author yuanpf
@@ -18,5 +15,5 @@ public interface SearchService {
     /**
      * 查询数据
      */
-    SearchResponseVo search(SearchParam searchParam) throws IOException;
+    SearchResponseVo search(SearchParam searchParam) throws Exception;
 }

@@ -1,6 +1,6 @@
 package com.atguigu.gmall.list.service.impl;
 
-import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.JSON;
 import com.atguigu.gmall.list.service.GoodsRepository;
 import com.atguigu.gmall.list.service.SearchService;
 import com.atguigu.gmall.model.list.*;
@@ -11,21 +11,18 @@ import com.atguigu.gmall.model.product.SkuInfo;
 import com.atguigu.gmall.product.client.ProductFeignClient;
 import org.apache.lucene.search.join.ScoreMode;
 import org.elasticsearch.action.search.SearchRequest;
-import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.common.text.Text;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.Operator;
-import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.nested.ParsedNested;
-import org.elasticsearch.search.aggregations.bucket.significant.ParsedSignificantLongTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.ParsedLongTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.ParsedStringTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
@@ -37,13 +34,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.io.IOException;
-import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -59,7 +51,6 @@ public class SearchServiceImpl  implements SearchService {
     @Autowired
     private GoodsRepository goodsRepository;
 
-    //
     @Autowired
     private RedisTemplate redisTemplate;
 
@@ -69,12 +60,11 @@ public class SearchServiceImpl  implements SearchService {
     //上架
     @Override
     public void upperGoods(Long skuId) {
+        //  声明变量
         Goods goods = new Goods();
-        //调用product ,根据skuid查询得到skuinfo + baseattr + baseattrvalue,封装到goods里面
-
-        //异步编排
-        CompletableFuture<SkuInfo> skuInfoAndImageCompletableFuture = CompletableFuture.supplyAsync(() -> {
-            //skuinfo数据和图片
+        //  此处goods 还是null，赋值
+        //  获取skuInfo;
+        CompletableFuture<SkuInfo> skuInfoCompletableFuture = CompletableFuture.supplyAsync(() -> {
             SkuInfo skuInfo = productFeignClient.getSkuInfoAndImageBySkuId(skuId);
             goods.setId(skuId);
             goods.setTitle(skuInfo.getSkuName());
@@ -84,54 +74,60 @@ public class SearchServiceImpl  implements SearchService {
             return skuInfo;
         });
 
-        CompletableFuture<Void> baseCategoryViewcompletableFuture = skuInfoAndImageCompletableFuture.thenAcceptAsync((skuInfo) -> {
-            //根据三级分类的id获取一级、二级、三级分类的id和名称
-            BaseCategoryView baseCategoryViewList = productFeignClient.getBaseCategoryViewList(skuInfo.getCategory3Id());
-            goods.setCategory1Id(baseCategoryViewList.getCategory1Id());
-            goods.setCategory2Id(baseCategoryViewList.getCategory2Id());
-            goods.setCategory3Id(baseCategoryViewList.getCategory3Id());
-            goods.setCategory1Name(baseCategoryViewList.getCategory1Name());
-            goods.setCategory2Name(baseCategoryViewList.getCategory2Name());
-            goods.setCategory3Name(baseCategoryViewList.getCategory3Name());
-        });
+        CompletableFuture<Void> completableFuture = skuInfoCompletableFuture.thenAcceptAsync((skuInfo -> {
+            //  获取分类数据
+            BaseCategoryView categoryView = productFeignClient.getBaseCategoryViewList(skuInfo.getCategory3Id());
+            goods.setCategory1Id(categoryView.getCategory1Id());
+            goods.setCategory1Name(categoryView.getCategory1Name());
+            goods.setCategory2Id(categoryView.getCategory2Id());
+            goods.setCategory2Name(categoryView.getCategory2Name());
+            goods.setCategory3Id(categoryView.getCategory3Id());
+            goods.setCategory3Name(categoryView.getCategory3Name());
+
+        }));
 
 
-        CompletableFuture<Void> baseAttrInfoCompletableFuture = CompletableFuture.runAsync(() -> {
-            //平台属性名 +平台属性值searAttrList
-            List<BaseAttrInfo> baseAttrInfoList = productFeignClient.getBaseAttrInfo(skuId);
-            /*List<SearchAttr> collect = baseAttrInfoList.stream().map((baseAttrInfo) -> {
-                SearchAttr searchAttr = new SearchAttr();
-                searchAttr.setAttrId(baseAttrInfo.getId());
-                searchAttr.setAttrName(baseAttrInfo.getAttrName());
-                searchAttr.setAttrValue(baseAttrInfo.getAttrValueList().get(0).getValueName());
-//                searchAttrList.add(searchAttr);
-                return searchAttr;
-            }).collect(Collectors.toList());*/
+        CompletableFuture<Void> trademarkCompletableFuture = skuInfoCompletableFuture.thenAcceptAsync((skuInfo -> {
+            //  获取品牌数据
+            BaseTrademark trademark = productFeignClient.getTrademarkData(skuInfo.getTmId());
+            goods.setTmId(trademark.getId());
+            goods.setTmName(trademark.getTmName());
+            goods.setTmLogoUrl(trademark.getLogoUrl());
+        }));
+
+        CompletableFuture<Void> attrListCompletableFuture = CompletableFuture.runAsync(() -> {
+            List<BaseAttrInfo> attrList = productFeignClient.getBaseAttrInfo(skuId);
+            //  整一个List<SearchAttr>
             List<SearchAttr> searchAttrList = new ArrayList<>();
-            baseAttrInfoList.stream().forEach((baseAttrInfo)->{
+            attrList.stream().forEach((baseAttrInfo -> {
                 SearchAttr searchAttr = new SearchAttr();
                 searchAttr.setAttrId(baseAttrInfo.getId());
                 searchAttr.setAttrName(baseAttrInfo.getAttrName());
                 searchAttr.setAttrValue(baseAttrInfo.getAttrValueList().get(0).getValueName());
-//              searchAttrList.add(searchAttr);
-            });
-            // goods.setAttrs(collect);
+                searchAttrList.add(searchAttr);
+
+            }));
+
+            //            List<Object> collect = attrList.stream().map((baseAttrInfo -> {
+            //                SearchAttr searchAttr = new SearchAttr();
+            //                searchAttr.setAttrId(baseAttrInfo.getId());
+            //                searchAttr.setAttrName(baseAttrInfo.getAttrName());
+            //                searchAttr.setAttrValue(baseAttrInfo.getAttrValueList().get(0).getValueName());
+            //                searchAttrList.add(searchAttr);
+            //                return searchAttr;
+            //            })).collect(Collectors.toList());
+            //            goods.setAttrs(collect);
+
             goods.setAttrs(searchAttrList);
         });
-        CompletableFuture<Void> trademarkDataCompletableFuture = skuInfoAndImageCompletableFuture.thenAcceptAsync((skuInfo) -> {
-            //品牌数据
-            BaseTrademark trademarkData = productFeignClient.getTrademarkData(skuInfo.getTmId());
-            goods.setTmId(skuInfo.getTmId());
-            goods.setTmName(trademarkData.getTmName());
-            goods.setTmLogoUrl(trademarkData.getLogoUrl());
-        });
+
         CompletableFuture.allOf(
-                skuInfoAndImageCompletableFuture,
-                baseCategoryViewcompletableFuture,
-                baseAttrInfoCompletableFuture,
-                trademarkDataCompletableFuture
+                skuInfoCompletableFuture,
+                completableFuture,
+                trademarkCompletableFuture,
+                attrListCompletableFuture
         ).join();
-        //保存
+        //  上架
         this.goodsRepository.save(goods);
     }
 
@@ -155,7 +151,7 @@ public class SearchServiceImpl  implements SearchService {
     }
 
     @Override
-    public SearchResponseVo search(SearchParam searchParam) throws IOException {
+    public SearchResponseVo search(SearchParam searchParam) throws Exception {
         //根据分类id、关键字等条件查询的所有字段封装在SearchParam类中，查询得到的所有数据封装在SearchResponseVo中
         /**
          * 获取动态生成的dsl语句
@@ -172,8 +168,10 @@ public class SearchServiceImpl  implements SearchService {
         searchResponseVo.setPageNo(searchParam.getPageNo());
         searchResponseVo.setPageSize(searchParam.getPageSize());
         //总页数 = （总记录数 + 每页显示记录数 - 1）/每页显示记录数
-        Long totalPages = (searchResponseVo.getTotal() + searchParam.getPageSize() - 1) / searchParam.getPageSize();
-        searchResponseVo.setTotal(totalPages);
+        /*Long totalPages = (searchResponseVo.getTotal() + searchParam.getPageSize() - 1) / searchParam.getPageSize();
+        searchResponseVo.setTotal(totalPages);   空指针*/
+        long totalPages = (searchResponseVo.getTotal()+searchParam.getPageSize()-1)/searchParam.getPageSize();
+        searchResponseVo.setTotalPages(totalPages);
         return searchResponseVo;
     }
 
@@ -183,71 +181,102 @@ public class SearchServiceImpl  implements SearchService {
      * @return
      */
     private SearchResponseVo parseSearchResult(SearchResponse response) {
-        SearchResponseVo searchResponseVo = new SearchResponseVo();//封装需要返回的数据
-        //获取hits
-        SearchHits hits = response.getHits();
-        SearchHit[] hits1 = hits.getHits();
 
-        //存放goods的集合
-        ArrayList<Goods> goodsArrayList = new ArrayList<>();
-        if (hits1 != null && hits1.length > 0){
-            for (SearchHit subHit : hits1) {
-                //获取到JSON字符串类型的数据
-                String goodsSource = subHit.getSourceAsString();
-                //类型转为为goos类型
-                Goods goods = JSONObject.parseObject(goodsSource, Goods.class);
-                //判断是否有高亮字段
-                if (subHit.getHighlightFields().get("title") != null){//有高亮字段
-                    Text titles = subHit.getHighlightFields().get("title").getFragments()[0];
-                    //设置
-                    goods.setTitle(titles.toString());
-                }
-                goodsArrayList.add(goods);
-            }
-        }
-
-        //获取品牌数据  query -->aggs[attrs.id] -->attrname\attrvalue
+        SearchResponseVo searchResponseVo = new SearchResponseVo();
+        //  获取品牌数据 从聚合
         Map<String, Aggregation> tmIdMap = response.getAggregations().asMap();
+        //  根据key 获取数据
         ParsedLongTerms tmIdAgg = (ParsedLongTerms) tmIdMap.get("tmIdAgg");
-        List<SearchResponseTmVo> tradmarklist = tmIdAgg.getBuckets().stream().map((bucket) -> {
-            //声明一个品牌对象
+        //  获取品牌集合对象
+        List<SearchResponseTmVo> trademarkList = tmIdAgg.getBuckets().stream().map((bucket) -> {
+            //  声明一个品牌对象
             SearchResponseTmVo searchResponseTmVo = new SearchResponseTmVo();
-            //获取品牌id
-            Number tmId = ((Terms.Bucket) bucket).getKeyAsNumber();
-            searchResponseTmVo.setTmId(tmId.longValue());
-            //获取品牌名称
+            //  获取品牌的Id
+            String tmId = ((Terms.Bucket) bucket).getKeyAsString();
+            searchResponseTmVo.setTmId(Long.parseLong(tmId));
+            // 获取品牌的名称
             ParsedStringTerms tmNameAgg = ((Terms.Bucket) bucket).getAggregations().get("tmNameAgg");
             String tmName = tmNameAgg.getBuckets().get(0).getKeyAsString();
             searchResponseTmVo.setTmName(tmName);
-            //获取品牌logo
+
+            // 获取品牌的url
             ParsedStringTerms tmLogoUrlAgg = ((Terms.Bucket) bucket).getAggregations().get("tmLogoUrlAgg");
             String tmLogoUrl = tmLogoUrlAgg.getBuckets().get(0).getKeyAsString();
             searchResponseTmVo.setTmLogoUrl(tmLogoUrl);
+
             return searchResponseTmVo;
         }).collect(Collectors.toList());
-        //将品牌数据放入返回的对象里面
-        searchResponseVo.setTrademarkList(tradmarklist);
 
-        //获取平台属性attr ->aggs[attrid]---->aggs[attrname attrvalue]
+        //  赋值品牌数据
+        searchResponseVo.setTrademarkList(trademarkList);
+
+        //  赋值平台属性
+        //  attrAgg 找个是nested
         ParsedNested attrAgg = (ParsedNested) tmIdMap.get("attrAgg");
-
+        //  获取数据
         ParsedLongTerms attrIdAgg = attrAgg.getAggregations().get("attrIdAgg");
-
-        List<SearchResponseAttrVo> attrlist = attrIdAgg.getBuckets().stream().map((bucket) -> {
-            //平台属性对象
+        //  使用stream
+        List<SearchResponseAttrVo> attrsList = attrIdAgg.getBuckets().stream().map((bucket) -> {
+            //  声明一个平台属性对象
             SearchResponseAttrVo searchResponseAttrVo = new SearchResponseAttrVo();
             Number attrId = ((Terms.Bucket) bucket).getKeyAsNumber();
+            //  赋值平台属性Id
             searchResponseAttrVo.setAttrId(attrId.longValue());
+            //  赋值平台属性名称
             ParsedStringTerms attrNameAgg = ((Terms.Bucket) bucket).getAggregations().get("attrNameAgg");
             String attrName = attrNameAgg.getBuckets().get(0).getKeyAsString();
             searchResponseAttrVo.setAttrName(attrName);
+            //  赋值平台属性值名称
             ParsedStringTerms attrValueAgg = ((Terms.Bucket) bucket).getAggregations().get("attrValueAgg");
             List<? extends Terms.Bucket> buckets = attrValueAgg.getBuckets();
+
+            //  声明一个集合
+            //            List<String> strings = new ArrayList<>();
+            //
+            //            for (Terms.Bucket bucket1 : buckets) {
+            //                String attrValue = bucket1.getKeyAsString();
+            //                strings.add(attrValue);
+            //            }
+            //  获取平台属性值集合
+            //  buckets.stream().map();  Terms.Bucket::getKeyAsString获取key .collect(Collectors.toList()) 将数据变成集合。
             searchResponseAttrVo.setAttrValueList(buckets.stream().map(Terms.Bucket::getKeyAsString).collect(Collectors.toList()));
+            //  searchResponseAttrVo.setAttrValueList(strings);
+
+            //  返回对象
             return searchResponseAttrVo;
         }).collect(Collectors.toList());
-        //赋值
-        searchResponseVo.setAttrsList(attrlist);
+
+        searchResponseVo.setAttrsList(attrsList);
+
+        //  获取hits
+        SearchHits hits = response.getHits();
+        SearchHit[] subHits = hits.getHits();
+        //  声明一个集合来存储goods
+        List<Goods> goodsList = new ArrayList<>();
+        //  设置 goodsList
+        if (subHits!=null && subHits.length>0){
+            for (SearchHit subHit : subHits) {
+                //  json 字符串
+                String goodsSource = subHit.getSourceAsString();
+                //  将找个json 字符串转换为对象Goods.class
+                Goods goods = JSON.parseObject(goodsSource, Goods.class);
+                //  但是，还缺少东东。
+                //  判断是否有高亮
+                if (subHit.getHighlightFields().get("title")!=null){
+                    //  说明有高亮字段
+                    Text title = subHit.getHighlightFields().get("title").getFragments()[0];
+                    //  获取高亮字段
+                    goods.setTitle(title.toString());
+                }
+                //  添加商品
+                goodsList.add(goods);
+            }
+        }
+        //  赋值商品数据
+        searchResponseVo.setGoodsList(goodsList);
+        //  赋值总记录数
+        searchResponseVo.setTotal(hits.totalHits);
+        //  返回数据
         return searchResponseVo;
     }
 
@@ -306,9 +335,10 @@ public class SearchServiceImpl  implements SearchService {
         //传递的参数格式 1：desc ,2:asc   1代表hotscore  2代表price
         //得到排序的字段
         String order = searchParam.getOrder();
-        if (StringUtils.isEmpty(order)){
+        if (!StringUtils.isEmpty(order)){
             //拆分为数组
-            String[] split = org.apache.commons.lang3.StringUtils.split(order);
+//            String[] split = org.apache.commons.lang3.StringUtils.split(order);
+            String[] split = order.split(":");
             if (split != null && split.length > 0){
                 //生命一个用来排序的字段
                 String field = null;
@@ -319,6 +349,7 @@ public class SearchServiceImpl  implements SearchService {
                     case "2":
                         field = "price"; //根据价格排序
                         break;
+
                 }
                 searchSourceBuilder.sort(field,"asc".equals(split[1])? SortOrder.ASC: SortOrder.DESC);
             }else {//没有排序的字段和值
@@ -366,10 +397,10 @@ public class SearchServiceImpl  implements SearchService {
         searchSourceBuilder.fetchSource(new String[]{"id","defaultImg","title","price"},null);
         //设置查询的数据  get /goods/info/_search
         SearchRequest searchRequest = new SearchRequest("goods");
-        searchRequest.searchType("info");
+        searchRequest.types("info");
         //将动态生成的dsl语句放进searchRequest对象里面并返回
         searchRequest.source(searchSourceBuilder);//
-
+        System.out.println("des语句：：：" + searchSourceBuilder.toString());
         return searchRequest;
     }
 }

@@ -3,13 +3,13 @@ package com.atguigu.gmall.list.controller;
 import com.atguigu.gmall.common.result.Result;
 import com.atguigu.gmall.list.service.SearchService;
 import com.atguigu.gmall.model.list.Goods;
-import com.atguigu.gmall.product.client.ProductFeignClient;
+import com.atguigu.gmall.model.list.SearchParam;
+import com.atguigu.gmall.model.list.SearchResponseVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
 
 /**
  * @author yuanpf
@@ -57,6 +57,19 @@ public class ListApiController {
         searchService.incrHotScore(skuId);
         return Result.ok();
     }
-
-
+    /**
+     * 全文检索：
+     *     检索条件->分类id、关键字->品牌、平台属性、属性值、分页、高亮、排序
+     */
+    /**
+     * 搜索商品
+     * @param searchParam
+     * @return
+     * @throws IOException
+     */
+    @PostMapping
+    public Result list(@RequestBody SearchParam searchParam) throws Exception {
+        SearchResponseVo response = searchService.search(searchParam);
+        return Result.ok(response);
+    }
 }
