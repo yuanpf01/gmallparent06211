@@ -983,7 +983,7 @@
             },
 
             addToCart() {
-                // 判断是否登录和是否存在临时用户，如果都没有，添加临时用户
+                // 判断是否登录和是否存在临时用户，如果都没有，添加临时用户id
                 if(!auth.isTokenExist() && !auth.isUserTempIdExist()) {
                     auth.setUserTempId()
                 }

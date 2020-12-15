@@ -8,7 +8,7 @@ var request = axios.create({
 request.interceptors.request.use(function(config){
     //在请求发出之前进行一些操作
     //debugger
-    if(auth.getToken()) {
+    if(auth.getToken()) {//如果token中有值，将token放在请求头里面
         config.headers['token'] = auth.getToken();
     }
     if(auth.getUserTempId()) {

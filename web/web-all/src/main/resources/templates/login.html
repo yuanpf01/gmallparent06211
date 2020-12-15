@@ -113,18 +113,18 @@
 
 		methods: {
             submitLogin() {
-                login.login(this.user).then(response => {
+                login.login(this.user).then(response => {//点击登录，提交用户名和密码到url: this.api_name + '/login',
                     debugger
-                    if (response.data.code == 200) {
+                    if (response.data.code == 200) { //如果控制器返回的状态码是200
                         //把token存在cookie中、也可以放在localStorage中
-                        auth.setToken(response.data.data.token)
-                        auth.setUserInfo(JSON.stringify(response.data.data))
+                        auth.setToken(response.data.data.token)   //从map中取出token放入cookie中  response.data.data=map
+                        auth.setUserInfo(JSON.stringify(response.data.data))//将map转为字符串，设置用户信息在cookie
 
                         console.log("originUrl:"+this.originUrl);
-                        if(this.originUrl == ''){
+                        if(this.originUrl == ''){//登录完成之后跳转的默认地址
                             window.location.href="http://www.gmall.com/index.html"
                             return ;
-                        } else {
+                        } else {//登录完成之后跳转到请求之后携带的url
                             window.location.href = decodeURIComponent(this.originUrl)
 						}
                     } else {

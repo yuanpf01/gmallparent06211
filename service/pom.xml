@@ -17,6 +17,7 @@
         <module>service-item</module>
         <module>service-list</module>
         <module>service-user</module>
+        <module>service-cart</module>
     </modules>
     <dependencies>
         <!--依赖服务的工具类-->
